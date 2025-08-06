@@ -1,0 +1,2 @@
+# bin
+CC bin
