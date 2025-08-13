@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cash Bin Maintenance Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22&gt;&lt;text y=%22.9em%22 font-size=%2290%22&gt;%F0%9F%97%91%EF%B8%8F&lt;/text&gt;&lt;/svg&gt;">
+
+
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      padding: 10px;
+      margin: 0; /* Remove default body margin */
+    }
+    h1, h2 { text-align: center; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 8px;
+      margin-bottom: 30px;
+    }
+
+    .bin {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 6px;
+      padding-top: 12px;
+      text-align: center;
+      font-size: 11px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .fresh-bg { background-color: #d4edda; }
+    .reissuable-bg { background-color: #d0e2f2; }
+    .soiled-bg { background-color: #f0e0d0; }
+    .progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px; /* Thicker progress bar */
+      background-color: #ddd;
+    }
+
+    .progress {
+      height: 100%;
+      transition: width 0.3s, background-color 0.3s;
+    }
+
+    .operating-table {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    /* Styles for bins within Operating Bins, Full Paid Notes, and Loose Pieces */
+    .operating-table .bin {
+      width: 70px; /* Fixed width for a small square */
+      height: 70px; /* Fixed height for a small square */
+      padding: 4px; /* Adjust padding for smaller size */
+      padding-top: 10px;
+      font-size: 10px; /* Slightly smaller font size */
+      display: flex; /* Use flexbox to center content */
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      flex-shrink: 0; /* Prevent shrinking in flex container */
+      box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    }
+
+    /* Adjustments for elements inside these smaller bins */
+    .operating-table .bin select,
+    .operating-table .bin input[type=number] {
+      width: 95%; /* Make inputs take up most of the width */
+      margin: 1px 0; /* Reduce margin */
+      font-size: 9px; /* Smaller font for inputs */
+      padding: 1px; /* Smaller padding for inputs */
+    }
+
+    .operating-table .bin .progress-bar {
+      height: 4px; /* Even thinner progress bar for small bins */
+    }
+
+    /* Adjust the label font size if it's too big */
+    .operating-table .bin strong {
+      font-size: 11px; /* Slightly smaller font for strong text */
+    }
+
+
+    select, input[type=number] {
+      width: 90%;
+      margin: 3px 0; /* Reduced margin */
+      font-size: 11px; /* Reduced font size */
+      padding: 2px; /* Reduced padding */
+    }
+    button {
+      padding: 8px 12px; /* Reduced padding */
+      margin: 4px; /* Reduced margin */
+      font-weight: bold;
+      border: 1px solid #ccc;
+      border-radius: 4px; /* Slightly smaller border radius */
+      background-color: #e0e0e0;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+        background-color: #d0d0d0;
+    }
+    .control-panel {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    /* New styles for the file upload button container */
+    .file-upload-container {
+        position: relative;
+        display: inline-block; /* Allows button to wrap content */
+        overflow: hidden; /* Hides parts of the input if it overflows */
+        margin: 4px; /* Match existing button margin */
+        border-radius: 4px; /* Match existing button border-radius */
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Optional: add a subtle shadow */
+    }
+
+    .file-upload-container .file-upload-button {
+    padding: 12px 28px;
+    background: linear-gradient(180deg, #d9d9d9, #b0b0b0); /* Metallic gradient */
+    color: #333;
+    border: 1px solid #888;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: inset 0 1px 0 #fff, 0 4px 6px rgba(0,0,0,0.2);
+    transition: all 0.15s ease;
+    }
+
+    .file-upload-container .file-upload-button:hover {
+    background: linear-gradient(180deg, #e6e6e6, #999999);
+    }
+
+    .file-upload-container .file-upload-button:active {
+    background: linear-gradient(180deg, #b0b0b0, #d9d9d9);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    transform: translateY(2px);
+    }
+
+    .file-upload-container input[type="file"] {
+        /* Style the actual file input to be invisible and cover the button */
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0; /* Make it completely transparent */
+        cursor: pointer;
+        z-index: 1; /* Ensure it's above the button */
+    }
+
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+    table th, table td {
+      border: 1px solid #aaa;
+      padding: 6px; /* Reduced padding */
+      font-size: 12px; /* Reduced font size */
+    }
+    .loose-bin {
+      border: 2px dashed red !important;
+      font-style: italic;
+    }
+
+    .summary-group {
+      margin-top: 20px; /* Reduced margin */
+    }
+
+    .dashboard-row {
+      display: flex;
+      justify-content: center;
+      align-items: stretch; /* Ensures same height */
+      gap: 20px; /* Reduced gap */
+      flex-wrap: wrap;
+    }
+
+
+    .dashboard-box {
+      background: #fff;
+      padding: 15px; /* Reduced padding */
+      border-radius: 10px; /* Slightly smaller border radius */
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); /* Lighter shadow */
+      width: 100%;
+    }
+    .dashboard-box table {
+      flex-grow: 1;
+    }
+
+
+    #emptyBinList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px; /* Reduced gap */
+      margin-top: 8px; /* Reduced margin */
+      padding: 3px 0; /* Reduced padding */
+    }
+
+    .empty-bin-tag {
+      border: 1px solid #c6f5c3;  /* light green border */
+      background-color: #f5fff4;  /* optional light background */
+      color: #5a2e0d;             /* deep brown text */
+      font-weight: bold;
+      border-radius: 4px; /* Slightly smaller border radius */
+      padding: 3px 6px; /* Reduced padding */
+      font-size: 12px; /* Reduced font size */
+    }
+
+    .small-thousand {
+      font-size: 10px; /* Reduced font size */
+      font-style: italic;
+      background-color: #c6f5c3; /* soft green highlight */
+      padding: 1px 4px; /* Reduced padding */
+      border-radius: 3px; /* Slightly smaller border radius */
+      margin-left: 2px; /* Reduced margin */
+      cursor: help;
+    }
+
+    #FullPaidNotes .bin {
+      border: 2px dashed green !important;
+      font-style: italic;
+    }
+
+    .slicer-btn {
+      margin: 2px;
+      padding: 4px 8px;
+      font-size: 12px;
+      border: 1px solid #888;
+      border-radius: 4px;
+      background-color: #f0f0f0;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    .slicer-btn:hover {
+      background-color: #ddd;
+    }
+    .slicer-btn.active {
+      background-color: #ff9800; /* orange */
+      color: white;
+      border-color: #ff9800;
+    }
+
+    .paid-notes-group, .operating-group, .mainbins-group {
+      border-radius: 15px; /* Slightly smaller border radius */
+      padding: 18px 15px; /* Reduced padding */
+      margin: 15px 0; /* Reduced margin */
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1); /* Lighter shadow */
+    }
+
+    .paid-notes-group h2, .operating-group h2, .mainbins-group h2 {
+      font-size: 18px; /* Reduced font size */
+      margin-bottom: 10px; /* Reduced margin */
+      padding-bottom: 3px; /* Reduced padding */
+    }
+
+    .mainbins-title {
+      font-size: 20px; /* Reduced font size */
+      padding: 8px 15px; /* Reduced padding */
+      border-radius: 10px; /* Slightly smaller border radius */
+      margin-bottom: 15px; /* Reduced margin */
+    }
+
+    .slicer-box {
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 15px;
+      background: #f8f9fa;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .slicer-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .slicer-label {
+      font-size: 13px;
+      font-weight: bold;
+      margin: 0;
+      padding: 0;
+    }
+
+    .slicer-buttons {
+      display: flex;
+      gap: 4px; /* Reduced gap */
+    }
+
+    .dashboard-header {
+      border-radius: 10px; /* Slightly smaller border radius */
+      padding: 15px; /* Reduced padding */
+      margin-bottom: 15px; /* Reduced margin */
+    }
+
+    .dashboard-header h1 {
+      font-size: 24px; /* Reduced font size */
+    }
+
+    .dashboard-header h2 {
+      font-size: 16px; /* Reduced font size */
+      margin-top: 8px; /* Reduced margin */
+    }
+
+    /* New styles for Main Bins Shortcuts (now Bin Filter) */
+    .bin-selection-filter { /* Renamed class */
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: #e6f0ff; /* Light blue background */
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    /* This rule uses flex to position its children (the label and the button wrapper) vertically and center them. */
+    .fab-container {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+    }
+
+    /* The "Total Value" label has its own background. */
+    #fab-total-value {
+      padding: 0 12px; /* Reduced horizontal padding */
+      height: 32px; /* Reduced height from 40px */
+      background-image: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      font-size: 13px; /* Reduced font size from 14px */
+      font-weight: bold;
+      border-radius: 10px; /* Slightly smaller radius */
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      white-space: nowrap;
+    }
+
+    /* The button wrapper has its own background. */
+    .fab-buttons-wrapper {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 3px; /* Reduced from 5px for tighter spacing */
+      padding: 8px 10px;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .fab {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #6c757d;
+      background-image: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+      color: white;
+      font-size: 16px; /* Reduced from 18px for smaller text/icons */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+      border: none;
+    }
+
+    .fab:hover {
+      background-color: #5a6268;
+      background-image: linear-gradient(135deg, #7a8288 0%, #5a6268 100%);
+      transform: scale(1.05);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    }
+
+    /* Specific style for the editing button when it's not a FAB */
+    .edit-toggle-button { /* Renamed class for clarity */
+        background-color: #FFC107; /* Amber/Yellow for editing */
+        color: #333; /* Darker text for contrast */
+        padding: 8px 15px; /* Standard button padding */
+        border-radius: 5px; /* Standard button border-radius */
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        border: 1px solid #ccc; /* Standard button border */
+    }
+    .edit-toggle-button:hover {
+        background-color: #FFA000; /* Darker amber on hover */
+    }
+
+    /* Activity Log Styles */
+    .activity-log-container {
+      margin-top: 40px;
+      padding: 20px;
+      background-color: #f0f8ff; /* Light blue background */
+      border: 1px solid #cce0ff;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .activity-log-container h2 {
+      text-align: center;
+      color: #005BAC;
+      margin-bottom: 15px;
+      border-bottom: 1px dashed #99c2ff;
+      padding-bottom: 5px;
+    }
+    .activity-log {
+      max-height: 250px; /* Limit height */
+      overflow-y: auto; /* Enable scrolling */
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .activity-log-item {
+      margin-bottom: 5px;
+      padding: 5px;
+      background-color: #ffffff;
+      border-radius: 5px;
+      border: 1px solid #eee;
+    }
+    .copy-log-btn {
+        margin-top: 15px;
+        display: block;
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 8px 15px;
+        background-color: #4CAF50; /* Green */
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+    .copy-log-btn:hover {
+        background-color: #45a049;
+    }
+
+    /* Value Analysis Section Styles */
+    .value-analysis-container {
+      margin-top: 40px;
+      padding: 20px;
+      background-color: #fff3e0; /* Light orange background */
+      border: 1px solid #ffcc80;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .value-analysis-container h2 {
+      color: #e65100; /* Darker orange */
+      margin-bottom: 15px;
+      border-bottom: 1px dashed #ffcc80;
+      padding-bottom: 5px;
+    }
+    .value-analysis-container p {
+      font-size: 1.1em;
+      margin-bottom: 10px;
+    }
+    .value-analysis-container input[type="number"] {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 180px;
+      margin-right: 10px;
+      font-size: 1em;
+    }
+    .value-analysis-container button {
+      padding: 8px 15px;
+      background-color: #ff9800; /* Orange */
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    .value-analysis-container button:hover {
+      background-color: #fb8c00; /* Darker orange */
+    }
+    .analysis-results {
+      margin-top: 20px;
+      text-align: left;
+      background-color: #ffffff;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #ffe0b2;
+    }
+    .analysis-results h3 {
+      color: #e65100;
+      margin-bottom: 10px;
+    }
+    .analysis-results ul {
+      list-style-type: disc;
+      margin-left: 20px;
+      padding-left: 0;
+    }
+    .analysis-results li {
+      margin-bottom: 5px;
+    }
+    .denomination-input-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .badge-input-group {
+        display: flex;
+        align-items: center;
+    }
+    .input-badge {
+        padding: 8px 12px;
+        background-color: #e9ecef;
+        border: 1px solid #ccc;
+        border-right: none;
+        border-radius: 5px 0 0 5px;
+        font-weight: bold;
+        white-space: nowrap;
+        font-size: 1em;
+    }
+    .badge-input-group input[type="number"] {
+        border-radius: 0 5px 5px 0;
+        margin-right: 0 !important;
+        border-left: none;
+        width: 120px;
+    }
+    .live-denom-diff {
+        font-size: 0.9em;
+        font-weight: bold;
+        min-height: 1.2em;
+        margin-top: 4px;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .dashboard-row {
+        flex-direction: column;
+        align-items: center;
+      }
+      .dashboard-box {
+        width: 95%;
+      }
+      .dashboard-header h1 {
+        font-size: 20px;
+      }
+      .dashboard-header h2 {
+        font-size: 14px;
+      }
+      table th, table td {
+        font-size: 11px;
+        padding: 4px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .slicer-box {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+      .slicer-group {
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+      }
+      .slicer-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 5px;
+      }
+      .grid {
+        grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+        gap: 5px;
+      }
+      .bin {
+        font-size: 10px;
+      }
+      .fab-container {
+        /* No longer needed at bottom for this specific media query adjustment */
+      }
+      .fab {
+        width: 35px;
+        height: 35px;
+        font-size: 16px;
+      }
+       .value-analysis-container input[type="number"] {
+        width: 150px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard-header">
+  <h1>SBI CHENGLEPUT</h1>
+  <h2>Cash Bin Maintenance Dashboard</h2>
+</div>
+  <div class="control-panel">
+    <div class="file-upload-container">
+        <button class="file-upload-button">📂Load Bin Data</button>
+        <input type="file" id="fullCsvFileInput" accept=".csv">
+    </div>
+  </div>
+
+  <div id="csv-info-panel" style="text-align: center; margin: 10px auto; display: none; background-color: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 500px;">
+      <p style="margin: 5px 0;"><strong>File Date & Time:</strong> <span id="csv-datetime">N/A</span></p>
+      <p style="margin: 5px 0;"><strong>Total Value from CSV:</strong> <span id="csv-total-value">N/A</span></p>
+  </div>
+
+
+<div class="mainbins-group">
+
+  <h2 class="mainbins-title" id="mainBinsSectionHeader">Main Bins (Bin 1-2 & 6-78)</h2>
+
+  <div class="bin-selection-filter" id="binSelectionFilter">
+    <p style="font-weight: bold; margin-bottom: 10px;">Filter by Bin Number:</p>
+    <div style="display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="binSearchInput" placeholder="e.g., 78, 1, 55, 23" style="width: 70%; padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; min-width: 200px;">
+    </div>
+  </div>
+
+<div class="slicer-box">
+    <div class="slicer-group">
+      <div class="slicer-label">Denomination:</div>
+      <div class="slicer-buttons">
+        <button class="slicer-btn active" onclick="setFilter('denom', '')">All</button>
+        <button class="slicer-btn" onclick="setFilter('denom', '500')">₹500</button>
+        <button class="slicer-btn" onclick="setFilter('denom', '200')">₹200</button>
+        <button class="slicer-btn" onclick="setFilter('denom', '100')">₹100</button>
+        <button class="slicer-btn" onclick="setFilter('denom', '50')">₹50</button>
+        <button class="slicer-btn" onclick="setFilter('denom', '20')">₹20</button>
+        <button class="slicer-btn" onclick="setFilter('denom', '10')">₹10</button>
+        <button class="slicer-btn" onclick="setFilter('denom', '5')">₹5</button>
+      </div>
+    </div>
+
+    <div class="slicer-group">
+      <div class="slicer-label">Note Type:</div>
+      <div class="slicer-buttons">
+        <button class="slicer-btn active" onclick="setFilter('type', '')">All</button>
+        <button class="slicer-btn" onclick="setFilter('type', 'Fresh')">Fresh</button>
+        <button class="slicer-btn" onclick="setFilter('type', 'Re-issuable')">Re-issuable</button>
+        <button class="slicer-btn" onclick="setFilter('type', 'Soiled')">Soiled</button>
+      </div>
+    </div>
+</div>
+
+  <div style="text-align: center; margin-bottom: 15px;">
+    <button class="edit-toggle-button" onclick="toggleEditing(this)">Enable Editing</button>
+  </div>
+
+  <div class="grid" id="mainBins"></div>
+
+</div>
+<div class="operating-group" id="operatingGroupSection">
+  <h2>Operating Bin - 1 <span class="small-thousand">('000)</span></h2>
+  <div class="operating-table" id="OB1"></div>
+
+  <h2>Operating Bin - 2 <span class="small-thousand">('000)</span></h2>
+  <div class="operating-table" id="OB2"></div>
+
+  <h2>Operating Bin - 3 <span class="small-thousand">('000)</span></h2>
+  <div class="operating-table" id="OB3"></div>
+</div>
+
+
+<div class="paid-notes-group" id="paidNotesGroupSection">
+  <h2>Full Paid Notes</h2>
+  <div class="operating-table" id="FullPaidNotes"></div>
+
+  <h2>Loose Pieces</h2>
+  <div class="operating-table" id="LoosePieces"></div>
+</div>
+
+<div class="summary-group" id="summaryGroupSection"> <h2 style="text-align:center; margin-bottom: 10px;">Summary</h2>
+  <div class="dashboard-row">
+    <div id="summaryDashboard" class="dashboard-box">
+      <h3 style="text-align:center;">Summary Dashboard</h3>
+      <table>
+        <thead>
+          <tr style="background:#ddd;">
+            <th>Denomination</th>
+            <th>Total (Bundles + Pieces)</th>
+            <th>Total Notes</th> <th>Total Value</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+        <tfoot>
+      <tr style="font-weight:bold; background:#f0f0f0;">
+    <td>Total</td>
+    <td id="totalBundles"></td>
+    <td id="grandTotalNotes"></td> <td id="totalValue"></td>
+  </tr>
+  <tr>
+    <td colspan="4" style="text-align: left; padding-top: 15px;"> <div id="totalValueInWords" style="font-style: italic; font-weight: 500;"></div>
+    </td>
+  </tr>
+        </tfoot>
+      </table>
+      <div style="text-align:center; margin-top: 15px;">
+        <button id="save-csv-button" onclick="downloadCSV()">Save to CSV</button>
+      </div>
+    </div>
+
+    <div id="noteTypeSummaryDashboard" class="dashboard-box">
+      <h3 style="text-align:center;">Note Type-wise Bundle Summary</h3>
+      <table>
+        <thead>
+          <tr style="background:#ddd;">
+            <th>Denomination</th>
+            <th>Fresh</th>
+            <th>Re-issuable</th>
+            <th>Soiled</th>
+            <th>Total</th> </tr>
+        </thead>
+        <tbody id="noteTypeSummaryBody"></tbody>
+        <tfoot>
+          <tr style="font-weight:bold; background:#f0f0f0;">
+            <td>Grand Total</td>
+            <td id="grandTotalFresh"></td>
+            <td id="grandTotalReissuable"></td>
+            <td id="grandTotalSoiled"></td>
+            <td id="grandTotalAllTypes"></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <h4 style="margin-top:25px;">Empty Bins</h4>
+      <p>Total Empty Bins: <strong id="emptyBinCount"></strong></p>
+      <p id="emptyBinList" style="max-height:150px; overflow-y:auto;"></p>
+    </div>
+  </div>
+</div>
+
+  <div class="value-analysis-container" id="valueAnalysisContainer">
+    <h2>Value Discrepancy Analysis</h2>
+    <p>Current Total Value: <strong id="currentTotalValueDisplay"></strong></p>
+    <div>
+      <label for="expectedTotalValue">Expected Overall Total Value (₹):</label>
+      <input type="number" id="expectedTotalValue" placeholder="Enter expected overall value" min="0">
+    </div>
+
+    <div id="live-discrepancy-display" style="margin-top: 15px; font-size: 1.2em; font-weight: bold; min-height: 1.5em;"></div>
+
+
+    <div style="margin-top: 25px;">
+        <h3>Denomination-wise Expected Notes:</h3>
+        <div id="expectedDenominationNotesInputs" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;"></div>
+    </div>
+
+    <div class="analysis-results" id="analysisResults">
+      <h3>Analysis Results:</h3>
+      <p>Enter expected values to see possible reasons for discrepancies.</p>
+    </div>
+  </div>
+
+  <div class="activity-log-container" id="activityLogContainer"> <h2>Activity Log</h2>
+    <div id="activityLog" class="activity-log"></div>
+    <button class="copy-log-btn" onclick="copyActivityLog()">Copy Log</button>
+  </div>
+
+  <div class="fab-container">
+    <div id="fab-total-value">Total: ₹0</div>
+    <div class="fab-buttons-wrapper">
+        <button class="fab" onclick="scrollToTop()" title="Scroll to Top">⬆️</button>
+        <button class="fab" onclick="scrollToOperatingBins()" title="Scroll to Operating Bins">⚙️</button>
+        <button class="fab" onclick="scrollToPaidLoose()" title="Scroll to Paid Notes & Loose Pieces">💰</button>
+        <button class="fab" onclick="scrollToSummary()" title="View Summary">📊</button>
+        <button class="fab" onclick="scrollToValueAnalysis()" title="Analyze Value">🔍</button>
+        <button class="fab" onclick="scrollToActivityLog()" title="View Activity Log">📜</button>
+        <button class="fab" onclick="scrollToSaveButton()" title="Save to CSV">💾</button>
+    </div>
+  </div>
+
+
+  <script>
+    // Make functions globally accessible for onclick attributes
+    window.toggleEditing = toggleEditing;
+    window.setFilter = setFilter;
+    window.scrollToTop = scrollToTop;
+    window.scrollToOperatingBins = scrollToOperatingBins;
+    window.scrollToPaidLoose = scrollToPaidLoose;
+    window.scrollToSummary = scrollToSummary;
+    window.scrollToValueAnalysis = scrollToValueAnalysis;
+    window.scrollToActivityLog = scrollToActivityLog;
+    window.scrollToSaveButton = scrollToSaveButton;
+    window.copyActivityLog = copyActivityLog;
+    window.downloadCSV = downloadCSV;
+
+    const mainBinIds = [...Array(78).keys()].map(i => i + 1).filter(id => id === 1 || id === 2 || (id >= 6 && id <= 78));
+    const operatingBins = ["OB1", "OB2", "OB3"];
+    const denominations = [500, 200, 100, 50, 20, 10, 5];
+    const noteTypes = ["Fresh", "Re-issuable", "Soiled"];
+    const maxBundles = { 500: 160, 200: 180, 100: 180, 50: 180, 20: 180, 10: 180, 5: 180 };
+    let editingEnabled = false;
+    let activeFilters = { denom: "", type: "" };
+    let currentNotesByDenomination = {}; // Global object to store current total notes per denomination
+    let originalMainBins = []; // To store the original order of main bin elements
+    let allBinElements = []; // To store all bin elements for CSV export
+
+    function createBin(id, labelVisible = true, fixedDenomination = null, fixedNoteType = null) {
+       const bin = document.createElement("div");
+       const isLoose = id.startsWith("Loose_");
+       const typeClass = fixedNoteType ? fixedNoteType.toLowerCase().replace('-', '') + "-bg" : "";
+       bin.className = `bin ${typeClass} ${isLoose ? "loose-bin" : ""}`;
+       bin.dataset.id = id;
+       bin.id = `bin-${id.replace(/\s/g, '-')}`; // Assign unique ID for scrolling
+
+       let label = "";
+       if (fixedDenomination !== null) {
+         label = `<strong>₹${fixedDenomination}</strong><br/>`;
+       } else if (labelVisible) {
+         const isLoose = id.includes("Loose");
+         const suffix = isLoose ? "" : " <span class='small-thousand' title='Each bundle = 1,000 notes'>(\'000)</span>";
+         label = `<strong>${id}${suffix}</strong><br/>`;
+       }
+
+       let denomSelectHtml = "";
+       let defaultDenom = fixedDenomination || denominations[0]; // Set default to first denomination if not fixed
+       if (!fixedDenomination) {
+         const denomOptions = denominations.map(d => {
+             const selectedAttr = (d === defaultDenom) ? 'selected' : '';
+             return `<option value="${d}" ${selectedAttr}>₹${d}</option>`;
+         }).join('');
+         denomSelectHtml = `<select class="denomination" disabled>${denomOptions}</select><br/>`;
+       }
+
+       let noteTypeSelectHtml = "";
+       let defaultNoteType = fixedNoteType || noteTypes[0]; // Set default to first note type if not fixed
+       if (!fixedNoteType) {
+         const noteTypeOptions = noteTypes.map(t => {
+             const selectedAttr = (t === defaultNoteType) ? 'selected' : '';
+             return `<option value="${t}" ${selectedAttr}>${t}</option>`;
+         }).join('');
+         noteTypeSelectHtml = `<select class="noteType" disabled>${noteTypeOptions}</select><br/>`;
+       }
+
+       bin.innerHTML = `
+         <div class="progress-bar">
+           <div class="progress ${fixedNoteType ? fixedNoteType.toLowerCase().replace('-', '') : ""}"></div>
+         </div>
+         ${label}
+         ${noteTypeSelectHtml}
+         ${denomSelectHtml}
+         <input type="number" class="bundleCount" placeholder="${id.includes('Loose_') || id.includes('FullPaid_') ? 'Pieces' : 'Bundles'}" min="0" title=""><br/>
+       `;
+
+       // Change event listener for bundleCount to 'change' (fires on blur/commit)
+       bin.querySelector(".bundleCount").addEventListener("change", updateProgress);
+
+       // Add change listener for denomination select to log changes
+       if (!fixedDenomination) bin.querySelector(".denomination").addEventListener("change", (e) => {
+           const oldDenom = bin.dataset.oldDenomination || 'N/A';
+           const newDenom = e.target.value;
+           if (oldDenom !== newDenom) {
+               logActivity(`💰 Box ${id.replace('Bin ', '')}: Denomination changed from ₹${oldDenom} to ₹${newDenom}`);
+           }
+           bin.dataset.oldDenomination = newDenom; // Update stored old value AFTER logging
+           updateProgress(e); // Also call updateProgress to update summary/colors
+       });
+
+       // Re-added change listener for noteType select to log changes
+       if (!fixedNoteType) bin.querySelector(".noteType").addEventListener("change", (e) => {
+           const oldType = bin.dataset.oldNoteType || 'N/A';
+           const newType = e.target.value;
+           if (oldType !== newType) {
+               logActivity(`🏷️ Box ${id.replace('Bin ', '')}: Note type changed from ${oldType} to ${newType}`);
+           }
+           bin.dataset.oldNoteType = newType; // Update stored old type AFTER logging
+           updateColor(e); // Also call updateColor to update bin color/progress
+       });
+
+       if (fixedDenomination) {
+         const denom = document.createElement("input");
+         denom.type = "hidden";
+         denom.className = "denomination";
+         denom.value = fixedDenomination;
+         bin.appendChild(denom);
+       }
+
+       if (fixedNoteType) {
+         const type = document.createElement("input");
+         type.type = "hidden";
+         type.className = "noteType";
+         type.value = fixedNoteType;
+         bin.appendChild(type);
+       }
+
+       // Initialize old values for logging
+       bin.dataset.oldBundleValue = bin.querySelector(".bundleCount")?.value || '0';
+       bin.dataset.oldNoteType = bin.querySelector(".noteType")?.value || (fixedNoteType || noteTypes[0]); // Use default if not fixed
+       bin.dataset.oldDenomination = bin.querySelector(".denomination")?.value || (fixedDenomination || denominations[0]); // Use default if not fixed
+
+
+       return bin;
+    }
+
+    function updateProgress(e) {
+      const bin = e.target.closest(".bin");
+      const bundle = parseInt(bin.querySelector(".bundleCount").value || 0);
+      const denom = parseInt(bin.querySelector(".denomination").value);
+      const progress = bin.querySelector(".progress");
+      const bundleInput = bin.querySelector(".bundleCount"); // Get the input element
+
+      // Log bundle count change only if value actually changed from old stored value
+      const oldValue = bin.dataset.oldBundleValue || '0';
+      if (oldValue !== bundle.toString()) {
+          logActivity(`📦 Box ${bin.dataset.id.replace('Bin ', '')}: 💵 count updated from ${oldValue} to ${bundle}`);
+          bin.dataset.oldBundleValue = bundle; // Update stored old value AFTER logging
+      }
+
+
+      // Corrected: Check for both Loose_ and FullPaid_ for piece calculation
+      const isPieceBin = bin.dataset.id.startsWith("Loose_") || bin.dataset.id.startsWith("FullPaid_");
+      const multiplier = isPieceBin ? 1 : 1000;
+      const currentValue = bundle * denom * multiplier;
+
+      bundleInput.title = `₹${currentValue.toLocaleString('en-IN')}`; // Update title on input
+
+      const percent = Math.min((bundle / maxBundles[denom]) * 100, 100);
+      progress.style.width = percent + "%";
+
+      // Calculate color based on percentage (green to red gradient)
+      const hue = 120 - (percent * 1.2); // 120 is green, 0 is red
+      progress.style.backgroundColor = `hsl(${hue}, 100%, 45%)`;
+
+      updateSummaryDashboard();
+    }
+
+    function updateColor(e) {
+      const bin = e.target.closest(".bin");
+      const type = bin.querySelector(".noteType").value;
+
+      bin.querySelector(".progress").className = `progress ${type.toLowerCase().replace('-', '')}`;
+      bin.className = `bin ${type.toLowerCase().replace('-', '')}-bg`;
+      updateSummaryDashboard();
+    }
+
+    function toggleEditing(btn) {
+      editingEnabled = !editingEnabled;
+      document.querySelectorAll(".denomination, .noteType, .bundleCount").forEach(el => el.disabled = !editingEnabled);
+      btn.textContent = editingEnabled ? "Disable Editing" : "Enable Editing";
+      logActivity(`✏️ Editing ${editingEnabled ? 'enabled' : 'disabled'}.`);
+    }
+
+    function loadFullCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const lines = e.target.result.split("\n").filter(l => l.trim());
+            const data = lines.slice(1).map(line => line.split(","));
+            let totalValueFromCsv = 0;
+
+            data.forEach(([id, type, denom, bundle]) => {
+                const trimmedCsvId = id.trim();
+                const foundBin = [...document.querySelectorAll(".bin")].find(b => b.dataset.id.trim() === trimmedCsvId);
+
+                if (foundBin) {
+                    if (foundBin.querySelector(".noteType")) foundBin.querySelector(".noteType").value = type.trim();
+                    if (foundBin.querySelector(".denomination")) foundBin.querySelector(".denomination").value = denom.trim();
+                    foundBin.querySelector(".bundleCount").value = bundle.trim();
+
+                    foundBin.dataset.oldBundleValue = bundle.trim();
+                    foundBin.dataset.oldNoteType = type.trim();
+                    foundBin.dataset.oldDenomination = denom.trim();
+
+                    const progress = foundBin.querySelector(".progress");
+                    const bundleInput = foundBin.querySelector(".bundleCount");
+                    const isPieceBin = foundBin.dataset.id.startsWith("Loose_") || foundBin.dataset.id.startsWith("FullPaid_");
+                    const multiplier = isPieceBin ? 1 : 1000;
+                    const count = parseInt(bundle.trim() || 0);
+                    const denominationValue = parseInt(denom.trim() || 0);
+                    const currentValue = count * denominationValue * multiplier;
+
+                    totalValueFromCsv += currentValue;
+
+                    bundleInput.title = `₹${currentValue.toLocaleString('en-IN')}`;
+                    const percent = Math.min((count / maxBundles[denominationValue]) * 100, 100);
+                    progress.style.width = percent + "%";
+                    const hue = 120 - (percent * 1.2);
+                    progress.style.backgroundColor = `hsl(${hue}, 100%, 45%)`;
+
+                    foundBin.querySelector(".progress").className = `progress ${type.trim().toLowerCase().replace('-', '')}`;
+                    foundBin.className = `bin ${type.trim().toLowerCase().replace('-', '')}-bg`;
+                }
+            });
+
+            // Update CSV info panel
+            const filename = file.name;
+            const match = filename.match(/(\d{2}-\d{2}-\d{4})_(\d{2}-\d{2}-\d{2})/);
+            if (match) {
+                const date = match[1];
+                const time = match[2].replace(/-/g, ':');
+                document.getElementById('csv-datetime').textContent = `${date} ${time}`;
+            } else {
+                document.getElementById('csv-datetime').textContent = "N/A (could not parse filename)";
+            }
+            document.getElementById('csv-total-value').textContent = `₹${totalValueFromCsv.toLocaleString('en-IN')}`;
+            document.getElementById('csv-info-panel').style.display = 'block';
+
+
+            updateSummaryDashboard();
+            applyFilters();
+            updateSlicerButtons();
+            styleLooseBins();
+            logActivity(`📁 Full CSV data loaded from ${file.name}.`);
+        };
+        reader.readAsText(file);
+    }
+
+    function downloadCSV() {
+        const rows = [["Bin ID", "Note Type", "Denomination", "Bundle Count"]];
+
+        // Create a new array to hold all bins from every section
+        const allBinsToSave = [];
+
+        // 1. Add all the original main bins, ignoring any current filters
+        allBinsToSave.push(...originalMainBins);
+
+        // 2. Add all bins from the Operating Bins sections
+        document.querySelectorAll("#OB1 .bin, #OB2 .bin, #OB3 .bin").forEach(bin => allBinsToSave.push(bin));
+
+        // 3. Add all bins from the Paid Notes and Loose Pieces sections
+        document.querySelectorAll("#FullPaidNotes .bin, #LoosePieces .bin").forEach(bin => allBinsToSave.push(bin));
+
+        // Iterate over the complete list of bins to build the CSV
+        allBinsToSave.forEach(bin => {
+            const id = bin.dataset.id;
+            const type = bin.querySelector(".noteType")?.value || "";
+            const denom = bin.querySelector(".denomination")?.value || "";
+            const bundle = bin.querySelector(".bundleCount")?.value || "0";
+            rows.push([id, type, denom, bundle]);
+        });
+
+        const csv = rows.map(r => r.join(",")).join("\n");
+        const now = new Date();
+        const fname = `BinData_${now.toLocaleDateString('en-GB').replace(/\//g, '-')}_${now.toLocaleTimeString('en-GB').replace(/:/g, '-')}.csv`;
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        logActivity(`💾 Complete CSV data downloaded as ${fname}.`);
+    }
+
+
+    function updateSummaryDashboard() {
+      const summary = {};
+      const typeSummary = {};
+      currentNotesByDenomination = {};
+
+      denominations.forEach(denom => {
+        summary[denom] = 0;
+        typeSummary[denom] = { Fresh: 0, "Re-issuable": 0, Soiled: 0, Total: 0 };
+        currentNotesByDenomination[denom] = 0;
+      });
+
+      let grandTotalBundles = 0;
+      let grandTotalValue = 0;
+      let emptyBins = [];
+      let grandTotalNotes = 0;
+
+      let grandTotalFreshBundles = 0;
+      let grandTotalReissuableBundles = 0;
+      let grandTotalSoiledBundles = 0;
+      let grandTotalAllTypesBundles = 0;
+
+      let grandTotalFreshValue = 0;
+      let grandTotalReissuableValue = 0;
+      let grandTotalSoiledValue = 0;
+      let grandTotalAllTypesValue = 0;
+
+      const bundleCountsByDenom = {};
+      const pieceCountsByDenom = {};
+
+      const operatingBinsForSummary = Array.from(document.querySelectorAll("#OB1 .bin, #OB2 .bin, #OB3 .bin"));
+      const allBinsForTypeSummary = [...originalMainBins, ...operatingBinsForSummary];
+
+      const paidLooseBinsForSummary = Array.from(document.querySelectorAll("#FullPaidNotes .bin, #LoosePieces .bin"));
+      const allBins = [...originalMainBins, ...operatingBinsForSummary, ...paidLooseBinsForSummary];
+
+
+      allBinsForTypeSummary.forEach(bin => {
+        const denom = parseInt(bin.querySelector(".denomination")?.value || 0);
+        const bundle = parseInt(bin.querySelector(".bundleCount")?.value || 0);
+        const type = bin.querySelector(".noteType")?.value || "";
+        const id = bin.dataset.id;
+
+        if (denominations.includes(denom)) {
+          if (typeSummary[denom] && typeSummary[denom][type] !== undefined) {
+            typeSummary[denom][type] += bundle;
+            typeSummary[denom]["Total"] += bundle;
+          }
+        }
+
+        if (originalMainBins.includes(bin) && bundle === 0) {
+          emptyBins.push(id);
+        }
+      });
+
+      allBins.forEach(bin => {
+        const denom = parseInt(bin.querySelector(".denomination")?.value || 0);
+        const count = parseInt(bin.querySelector(".bundleCount")?.value || 0);
+
+        if (!denominations.includes(denom)) return;
+
+        const isPieceBin = bin.closest("#LoosePieces") !== null || bin.closest("#FullPaidNotes") !== null;
+        const multiplier = isPieceBin ? 1 : 1000;
+
+        if (isPieceBin) {
+          pieceCountsByDenom[denom] = (pieceCountsByDenom[denom] || 0) + count;
+        } else {
+          bundleCountsByDenom[denom] = (bundleCountsByDenom[denom] || 0) + count;
+        }
+
+        grandTotalBundles += count;
+        const currentNotes = count * multiplier;
+        grandTotalNotes += currentNotes;
+        grandTotalValue += currentNotes * denom;
+        currentNotesByDenomination[denom] += currentNotes;
+      });
+
+      const tbody = document.getElementById("summaryBody");
+      tbody.innerHTML = "";
+      denominations.forEach(denom => {
+        const tr = document.createElement("tr");
+
+        const bundleCount = bundleCountsByDenom[denom] || 0;
+        const pieceCount = pieceCountsByDenom[denom] || 0;
+
+        const totalNotesForDenom = (bundleCount * 1000) + pieceCount;
+        const totalValue = totalNotesForDenom * denom;
+
+        tr.innerHTML = `
+          <td>₹${denom}</td>
+          <td>${bundleCount} bundles + ${pieceCount} pieces</td>
+          <td>${totalNotesForDenom.toLocaleString("en-IN")}</td>
+          <td>₹${totalValue.toLocaleString("en-IN")}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("totalBundles").textContent = grandTotalBundles;
+      document.getElementById("grandTotalNotes").textContent = grandTotalNotes.toLocaleString("en-IN");
+      document.getElementById("totalValue").textContent = `₹${grandTotalValue.toLocaleString("en-IN")}`;
+      document.getElementById("totalValueInWords").textContent = convertNumberToWords(grandTotalValue);
+      document.getElementById("currentTotalValueDisplay").textContent = `₹${grandTotalValue.toLocaleString("en-IN")}`;
+
+      const noteTbody = document.getElementById("noteTypeSummaryBody");
+      noteTbody.innerHTML = "";
+      denominations.forEach(denom => {
+        const tr = document.createElement("tr");
+        const freshBundles = typeSummary[denom]["Fresh"];
+        const reissuableBundles = typeSummary[denom]["Re-issuable"];
+        const soiledBundles = typeSummary[denom]["Soiled"];
+        const totalBundles = typeSummary[denom]["Total"];
+
+        const freshValue = freshBundles * denom * 1000;
+        const reissuableValue = reissuableBundles * denom * 1000;
+        const soiledValue = soiledBundles * denom * 1000;
+        const totalTypeValue = totalBundles * denom * 1000;
+
+        tr.innerHTML = `
+          <td>₹${denom}</td>
+          <td title="₹${freshValue.toLocaleString('en-IN')}">${freshBundles}</td>
+          <td title="₹${reissuableValue.toLocaleString('en-IN')}">${reissuableBundles}</td>
+          <td title="₹${soiledValue.toLocaleString('en-IN')}">${soiledBundles}</td>
+          <td title="₹${totalTypeValue.toLocaleString('en-IN')}">${totalBundles}</td>
+        `;
+        noteTbody.appendChild(tr);
+
+        grandTotalFreshBundles += freshBundles;
+        grandTotalReissuableBundles += reissuableBundles;
+        grandTotalSoiledBundles += soiledBundles;
+        grandTotalAllTypesBundles += totalBundles;
+
+        grandTotalFreshValue += freshValue;
+        grandTotalReissuableValue += reissuableValue;
+        grandTotalSoiledValue += soiledValue;
+        grandTotalAllTypesValue += totalTypeValue;
+      });
+
+      document.getElementById("grandTotalFresh").textContent = grandTotalFreshBundles;
+      document.getElementById("grandTotalReissuable").textContent = grandTotalReissuableBundles;
+      document.getElementById("grandTotalSoiled").textContent = grandTotalSoiledBundles;
+      document.getElementById("grandTotalAllTypes").textContent = grandTotalAllTypesBundles;
+
+      document.getElementById("grandTotalFresh").title = `₹${grandTotalFreshValue.toLocaleString('en-IN')}`;
+      document.getElementById("grandTotalReissuable").title = `₹${grandTotalReissuableValue.toLocaleString('en-IN')}`;
+      document.getElementById("grandTotalSoiled").title = `₹${grandTotalSoiledValue.toLocaleString('en-IN')}`;
+      document.getElementById("grandTotalAllTypes").title = `₹${grandTotalAllTypesValue.toLocaleString('en-IN')}`;
+
+      document.getElementById("emptyBinCount").textContent = emptyBins.length;
+      const emptyBinList = document.getElementById("emptyBinList");
+      emptyBinList.innerHTML = "";
+
+      if (emptyBins.length > 0) {
+        emptyBins.forEach(binId => {
+          const tag = document.createElement("span");
+          tag.className = "empty-bin-tag";
+          tag.textContent = binId;
+          emptyBinList.appendChild(tag);
+        });
+      } else {
+        emptyBinList.textContent = "None";
+      }
+
+      document.getElementById('fab-total-value').textContent = `Total: ₹${grandTotalValue.toLocaleString("en-IN")}`;
+
+      populateDenominationInputsWithCurrentValues();
+      analyzeValueDiscrepancy(); // Call analysis after summary is updated
+    }
+
+    function logActivity(message) {
+        const logContainer = document.getElementById('activityLog');
+        if (!logContainer) return;
+
+        const timestamp = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const logItem = document.createElement('div');
+        logItem.classList.add('activity-log-item');
+        logItem.textContent = `[${timestamp}] ${message}`;
+        logContainer.prepend(logItem);
+
+        if (logContainer.children.length > 100) {
+            logContainer.removeChild(logContainer.lastChild);
+        }
+    }
+
+    function copyActivityLog() {
+        const logContainer = document.getElementById('activityLog');
+        if (!logContainer) return;
+
+        const logText = Array.from(logContainer.children)
+                            .map(item => item.textContent)
+                            .reverse() // To get chronological order
+                            .join('\n');
+
+        const tempTextArea = document.createElement('textarea');
+        tempTextArea.value = logText;
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
+        try {
+            document.execCommand('copy');
+            alert('Activity log copied to clipboard!');
+        } catch (err) {
+            console.error('Failed to copy log:', err);
+            alert('Failed to copy log.');
+        } finally {
+            document.body.removeChild(tempTextArea);
+        }
+    }
+
+
+    function populateDashboard() {
+      const mainContainer = document.getElementById("mainBins");
+      mainContainer.innerHTML = '';
+      mainBinIds.forEach(id => {
+        const bin = createBin("Bin " + id);
+        mainContainer.appendChild(bin);
+      });
+      originalMainBins = Array.from(document.querySelectorAll("#mainBins .bin"));
+
+
+      operatingBins.forEach(binSet => {
+        const container = document.getElementById(binSet);
+        container.innerHTML = '';
+        denominations.forEach(denom => {
+          const bin = createBin(`${binSet}_${denom}`, true, denom, "Re-issuable");
+          container.appendChild(bin);
+        });
+      });
+
+      const fullPaidContainer = document.getElementById("FullPaidNotes");
+      fullPaidContainer.innerHTML = '';
+      denominations.forEach(denom => {
+        const bin = createBin(`FullPaid_${denom}`, true, denom, "Re-issuable");
+        fullPaidContainer.appendChild(bin);
+      });
+
+      const looseContainer = document.getElementById("LoosePieces");
+      looseContainer.innerHTML = '';
+      denominations.forEach(denom => {
+        const bin = createBin(`Loose_${denom}`, true, denom, "Re-issuable");
+        looseContainer.appendChild(bin);
+      });
+
+      document.getElementById('binSearchInput').addEventListener('input', applyFilters);
+      document.getElementById('fullCsvFileInput').addEventListener('change', loadFullCSV);
+///
+
+document.getElementById('binSearchInput').addEventListener('keypress', function(e) {
+    let char = String.fromCharCode(e.which);
+    if (!/[0-9,]/.test(char)) {
+        e.preventDefault();
+    }
+});
+
+// Clean up pasted text
+document.getElementById('binSearchInput').addEventListener('paste', function(e) {
+    e.preventDefault();
+    let pasted = (e.clipboardData || window.clipboardData).getData('text');
+    let clean = pasted.replace(/[^0-9,]/g, ''); // remove anything not number or comma
+    document.execCommand('insertText', false, clean);
+});
+
+
+//
+      allBinElements = Array.from(document.querySelectorAll(".bin"));
+      updateSummaryDashboard();
+      createDenominationInputs();
+      updateSlicerButtons();
+      styleLooseBins();
+    }
+
+    function createDenominationInputs() {
+        const container = document.getElementById('expectedDenominationNotesInputs');
+        container.innerHTML = '';
+        denominations.forEach(denom => {
+            const wrapperDiv = document.createElement('div');
+            wrapperDiv.classList.add('denomination-input-wrapper');
+            const currentValue = currentNotesByDenomination[denom] || 0;
+            wrapperDiv.innerHTML = `
+                <div class="badge-input-group">
+                    <span class="input-badge">₹${denom}</span>
+                    <input type="number" id="expectedNotes_${denom}" placeholder="Notes" min="0" value="${currentValue}">
+                </div>
+                <div class="live-denom-diff" id="diff_${denom}"></div>
+            `;
+            container.appendChild(wrapperDiv);
+            // Add event listener for live updates
+            document.getElementById(`expectedNotes_${denom}`).addEventListener('input', analyzeValueDiscrepancy);
+        });
+        // Add event listener for the overall value input
+        document.getElementById('expectedTotalValue').addEventListener('input', analyzeValueDiscrepancy);
+    }
+
+    function populateDenominationInputsWithCurrentValues() {
+        denominations.forEach(denom => {
+            const inputElement = document.getElementById(`expectedNotes_${denom}`);
+            if (inputElement) {
+                inputElement.value = currentNotesByDenomination[denom] || 0;
+            }
+        });
+    }
+
+
+    function convertNumberToWords(num) {
+      if (num === 0) return 'Zero Rupees Only';
+
+      const a = [
+        '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
+        'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen',
+        'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+      ];
+      const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+      const numToWords = (n, suffix) => {
+        let str = '';
+        if (n > 19) {
+          str += b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
+        } else if (n > 0) {
+          str += a[n];
+        }
+        return str ? str + suffix : '';
+      };
+
+      let output = '';
+      let tempNum = num;
+
+      const arab = Math.floor(tempNum / 1000000000);
+      tempNum %= 1000000000;
+      if (arab > 0) output += numToWords(arab, ' Arab ');
+
+      const crore = Math.floor(tempNum / 10000000);
+      tempNum %= 10000000;
+      if (crore > 0) output += numToWords(crore, ' Crore ');
+
+      const lakh = Math.floor(tempNum / 100000);
+      tempNum %= 100000;
+      if (lakh > 0) output += numToWords(lakh, ' Lakh ');
+
+      const thousand = Math.floor(tempNum / 1000);
+      tempNum %= 1000;
+      if (thousand > 0) output += numToWords(thousand, ' Thousand ');
+
+      const hundred = Math.floor(tempNum / 100);
+      tempNum %= 100;
+      if (hundred > 0) output += numToWords(hundred, ' Hundred ');
+
+      if (num > 100 && num % 100 > 0) output += 'and ';
+      output += numToWords(tempNum, '');
+
+      return output.trim() + ' Rupees Only';
+    }
+
+    function styleLooseBins() {
+      document.querySelectorAll(".bin").forEach(bin => {
+        if (bin.dataset.id.includes("Loose")) {
+          bin.style.border = "2px dashed red";
+          const label = bin.querySelector("strong");
+          if (label) {
+            label.style.fontStyle = "italic";
+          }
+        }
+      });
+    }
+
+    function setFilter(type, value) {
+      activeFilters[type] = value;
+      updateSlicerButtons();
+      applyFilters();
+    }
+
+    function updateSlicerButtons() {
+      document.querySelectorAll('.slicer-box .slicer-group').forEach(group => {
+          group.querySelectorAll('.slicer-btn').forEach(btn => btn.classList.remove('active'));
+      });
+
+      const activeDenomBtn = activeFilters.denom ? document.querySelector(`.slicer-btn[onclick="setFilter('denom', '${activeFilters.denom}')"]`) : document.querySelector(`.slicer-btn[onclick="setFilter('denom', '')"]`);
+      if(activeDenomBtn) activeDenomBtn.classList.add('active');
+
+      const activeTypeBtn = activeFilters.type ? document.querySelector(`.slicer-btn[onclick="setFilter('type', '${activeFilters.type}')"]`) : document.querySelector(`.slicer-btn[onclick="setFilter('type', '')"]`);
+      if(activeTypeBtn) activeTypeBtn.classList.add('active');
+    }
+
+
+    function applyFilters() {
+        const mainBinsContainer = document.getElementById('mainBins');
+        const searchInput = document.getElementById('binSearchInput');
+
+        const denomFilter = activeFilters.denom;
+        const typeFilter = activeFilters.type;
+        const searchOrder = searchInput.value
+            .split(',')
+            .map(s => parseInt(s.trim()))
+            .filter(num => !isNaN(num));
+
+        const binMap = new Map();
+        originalMainBins.forEach(bin => {
+            const binNumber = parseInt(bin.dataset.id.replace('Bin ', ''));
+            binMap.set(binNumber, bin);
+        });
+
+        let binsToDisplay = [];
+        if (searchOrder.length > 0) {
+            searchOrder.forEach(binNumber => {
+                const bin = binMap.get(binNumber);
+                if (bin) {
+                    binsToDisplay.push(bin);
+                }
+            });
+        } else {
+            binsToDisplay = [...originalMainBins];
+        }
+
+        const fragment = document.createDocumentFragment();
+        binsToDisplay.forEach(bin => {
+            const binDenom = bin.querySelector(".denomination")?.value || "";
+            const binType = bin.querySelector(".noteType")?.value || "";
+
+            const matchDenom = !denomFilter || binDenom === denomFilter;
+            const matchType = !typeFilter || binType === typeFilter;
+
+            if (matchDenom && matchType) {
+                fragment.appendChild(bin);
+            }
+        });
+
+        mainBinsContainer.innerHTML = '';
+        mainBinsContainer.appendChild(fragment);
+    }
+
+    // Floating button scroll functions
+    function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    function scrollToOperatingBins() { document.getElementById('operatingGroupSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    function scrollToPaidLoose() { document.getElementById('paidNotesGroupSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    function scrollToSummary() { document.getElementById('summaryGroupSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    function scrollToValueAnalysis() { document.getElementById('valueAnalysisContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    function scrollToActivityLog() { document.getElementById('activityLogContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    function scrollToSaveButton() { document.getElementById('save-csv-button')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+
+
+    function analyzeValueDiscrepancy() {
+      // Guard clause to prevent running before inputs are created on initial load
+      const expectedNotesInput = document.getElementById('expectedNotes_500');
+      if (!expectedNotesInput) {
+          return;
+      }
+
+      const currentTotalValueStr = document.getElementById('totalValue').textContent.replace('₹', '').replace(/,/g, '');
+      const currentTotalValue = parseInt(currentTotalValueStr);
+      const expectedTotalValue = parseInt(document.getElementById('expectedTotalValue').value || 0);
+      const resultsDiv = document.getElementById('analysisResults');
+      const liveDisplay = document.getElementById('live-discrepancy-display');
+      resultsDiv.innerHTML = '<h3>Analysis Results:</h3>';
+
+      let overallStatusHtml = '';
+      let denominationStatusHtml = '';
+      let allPossibleReasonsHtml = '';
+      let generalSolutionsHtml = '';
+
+      // Overall Value Analysis
+      overallStatusHtml += '<h4>Overall Value Analysis:</h4>';
+      if (expectedTotalValue === 0) {
+          liveDisplay.innerHTML = '';
+          overallStatusHtml += '<p>Enter an expected overall value to begin analysis.</p>';
+      } else if (currentTotalValue === expectedTotalValue) {
+        liveDisplay.innerHTML = '<span style="color: green;">✅ Overall Values Match!</span>';
+        overallStatusHtml += '<p style="color: green; font-weight: bold;">✅ Current overall total value matches the expected overall value!</p>';
+      } else {
+        const difference = expectedTotalValue - currentTotalValue;
+        const discrepancyType = difference > 0 ? 'Shortage' : 'Excess';
+        liveDisplay.innerHTML = `<span style="color: red;">Overall Difference: ${discrepancyType} of ₹${Math.abs(difference).toLocaleString('en-IN')}</span>`;
+        overallStatusHtml += `<p style="color: red; font-weight: bold;">❌ Discrepancy found! Current value has a ${discrepancyType} of ₹${Math.abs(difference).toLocaleString('en-IN')}.</p>`;
+
+        allPossibleReasonsHtml += '<h5>Possible Overall Reasons:</h5><ul>';
+        allPossibleReasonsHtml += '<li><strong>Data Entry Errors:</strong> Simple typos in bundle/piece counts.</li>';
+        allPossibleReasonsHtml += '<li><strong>Missing/Duplicate Bins:</strong> Bins might be missing or duplicated in the data.</li>';
+        allPossibleReasonsHtml += '<li><strong>Incorrect Denominations:</strong> Bins might have wrong denominations assigned.</li>';
+        allPossibleReasonsHtml += '</ul>';
+      }
+
+      // Denomination-wise Analysis
+      denominationStatusHtml += '<h4 style="margin-top: 20px;">Denomination-wise Notes Analysis:</h4>';
+      let allDenominationsMatch = true;
+      denominations.forEach(denom => {
+          const currentNotes = currentNotesByDenomination[denom] || 0;
+          const expectedNotesInput = document.getElementById(`expectedNotes_${denom}`);
+          const expectedNotes = parseInt(expectedNotesInput.value || 0);
+          const diffDisplay = document.getElementById(`diff_${denom}`);
+
+          if (isNaN(expectedNotes)) {
+              denominationStatusHtml += `<p style="color: orange;">⚠️ Please enter a valid number for Expected ₹${denom} Notes.</p>`;
+              if (diffDisplay) diffDisplay.innerHTML = '';
+              allDenominationsMatch = false;
+              return;
+          }
+
+          const difference = currentNotes - expectedNotes;
+
+          denominationStatusHtml += `<p><strong>₹${denom} Notes:</strong> Current: ${currentNotes.toLocaleString('en-IN')}, Expected: ${expectedNotes.toLocaleString('en-IN')}`;
+
+          if (difference === 0) {
+              denominationStatusHtml += ` <span style="color: green;">✅ Match</span></p>`;
+              if (diffDisplay) diffDisplay.innerHTML = `<span style="color: green;">✅ Match</span>`;
+          } else {
+              allDenominationsMatch = false;
+              const discrepancyType = difference > 0 ? 'Excess' : 'Shortage';
+              denominationStatusHtml += ` <span style="color: red;">❌ ${discrepancyType} of ${Math.abs(difference).toLocaleString('en-IN')} notes</span></p>`;
+              if (diffDisplay) diffDisplay.innerHTML = `<span style="color: red;">${discrepancyType}: ${Math.abs(difference).toLocaleString('en-IN')}</span>`;
+
+              allPossibleReasonsHtml += `<h5>Possible Reasons for ₹${denom} Discrepancy:</h5><ul>`;
+              allPossibleReasonsHtml += `<li><strong>Count Error:</strong> Check counts for ₹${denom} bins.</li>`;
+              allPossibleReasonsHtml += `<li><strong>Denomination Mismatch:</strong> Notes of ₹${denom} might be entered under another denomination.</li>`;
+              allPossibleReasonsHtml += `</ul>`;
+          }
+      });
+
+      if (!allDenominationsMatch || (currentTotalValue !== expectedTotalValue && expectedTotalValue !== 0)) {
+          generalSolutionsHtml += '<h4 style="margin-top: 20px;">General Solutions:</h4><ul>';
+          generalSolutionsHtml += '<li><strong>Verify Counts:</strong> Re-check bundle/piece counts in all bins.</li>';
+          generalSolutionsHtml += '<li><strong>Check Denominations:</strong> Ensure correct denomination is selected.</li>';
+          generalSolutionsHtml += '<li><strong>Review Activity Log:</strong> Look for recent changes.</li>';
+          generalSolutionsHtml += '<li><strong>Reload Data:</strong> Try reloading the CSV to rule out import issues.</li>';
+          generalSolutionsHtml += '</ul>';
+      } else if (expectedTotalValue !== 0) {
+          generalSolutionsHtml += '<p style="color: green; font-weight: bold; margin-top: 20px;">All values match perfectly!</p>';
+      }
+
+      resultsDiv.innerHTML = '<h3>Analysis Results:</h3>' + overallStatusHtml + denominationStatusHtml + allPossibleReasonsHtml + generalSolutionsHtml;
+    }
+
+
+    function restoreState(snapshotStr) {
+        const state = JSON.parse(snapshotStr);
+        state.forEach(({ id, type, denom, bundle }) => {
+            const bin = [...document.querySelectorAll(".bin")].find(b => b.dataset.id === id);
+            if (bin) {
+                if (bin.querySelector(".noteType")) bin.querySelector(".noteType").value = type;
+                if (bin.querySelector(".denomination")) bin.querySelector(".denomination").value = denom;
+                bin.querySelector(".bundleCount").value = bundle;
+
+                const event = new Event('change', { bubbles: true });
+                bin.querySelector(".bundleCount").dispatchEvent(event);
+            }
+        });
+        updateSummaryDashboard();
+        styleLooseBins();
+    }
+
+    populateDashboard();
+  </script>
+
+</body>
+</html>
